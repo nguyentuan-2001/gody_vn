@@ -5,9 +5,28 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "../index.css";
 const roads = require("../data/diaphantinh.geojson");
 
+function setDataToLocalStorage(key, obj) {
+  localStorage.setItem(key, JSON.stringify(obj));
+}
+
+function getDataFromLocalStorage(key) {
+  const objString = localStorage.getItem(key);
+  return objString ? JSON.parse(objString) : null;
+}
 const HoverMap = () => {
   const mapContainerRef = useRef();
   const mapRef = useRef();
+
+  const goIds = getDataFromLocalStorage("goIds");
+  const goingSoonIds = getDataFromLocalStorage("goingSoonIds");
+  useEffect(() => {
+    if (!goIds) {
+      setDataToLocalStorage("goIds", []);
+    }
+    if (!goingSoonIds) {
+      setDataToLocalStorage("goingSoonIds", []);
+    }
+  }, []);
 
   const mapstyle = "mapbox://styles/tuan2k1tv/clpw10vsk01i001p9gmiu52tp";
   const green = {
@@ -30,7 +49,7 @@ const HoverMap = () => {
     ],
   };
   const [currentStyle, setCurrentStyle] = useState(mapstyle);
-  const highlightedIds = [1, 2, 3];
+  const [reload, setReload] = useState(true);
 
   useEffect(() => {
     mapboxgl.accessToken =
@@ -40,7 +59,7 @@ const HoverMap = () => {
       container: "map",
       style: currentStyle,
       center: [105.843484, 21.005532],
-      zoom: 17,
+      zoom: 4.5,
       hash: "map",
     });
 
@@ -60,8 +79,18 @@ const HoverMap = () => {
         source: "states",
         layout: {},
         paint: {
-            "fill-color": "#627BC1",
-          //   "fill-color": ["case", ["==", ["id"], 5], "#FFA500", "#627BC1"],
+          "fill-color": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            "#627BC1",
+            [
+              "match",
+              ["id"],
+              goIds,
+              "#FFA500",
+              ["match", ["id"], goingSoonIds, "#ff0000", "#627BC1"],
+            ],
+          ],
           "fill-opacity": [
             "case",
             ["boolean", ["feature-state", "hover"], false],
@@ -82,6 +111,11 @@ const HoverMap = () => {
         },
       });
 
+      const popupName = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+      });
+
       mapRef.current.on("mousemove", "state-fills", (e) => {
         if (e.features.length > 0) {
           if (hoveredPolygonId !== null) {
@@ -95,6 +129,15 @@ const HoverMap = () => {
             { source: "states", id: hoveredPolygonId },
             { hover: true }
           );
+
+          const feature = e.features[0];
+          const { ten_tinh } = feature.properties;
+
+          // Update and show the popup
+          popupName
+            .setLngLat(e.lngLat)
+            .setHTML(`<h3>${ten_tinh}</h3>`)
+            .addTo(mapRef.current);
         }
       });
 
@@ -106,6 +149,7 @@ const HoverMap = () => {
           );
         }
         hoveredPolygonId = null;
+        popupName.remove();
       });
     });
 
@@ -122,7 +166,7 @@ const HoverMap = () => {
     });
 
     return () => mapRef.current.remove();
-  }, [currentStyle]);
+  }, [currentStyle, reload]);
 
   const handleChangeStyle = () => {
     if (currentStyle !== mapstyle) {
@@ -137,8 +181,8 @@ const HoverMap = () => {
       <div style="padding: 5px; border-radius:10px ">
         <h3 style="margin: 0; color: #484896;">${feature.properties.ten_tinh}</h3>
         <p><strong>Population:</strong> ${feature.properties.gid}</p>
-        <button id="popup-button-1" style="margin-right: 5px;">Go!</button>
-        <button id="popup-button-2"> Going Soon!</button>
+        <button id="popup-button-1" style="margin-right: 5px;">Đã đi!</button>
+        <button id="popup-button-2">Sắp đi!</button>
       </div>
     `;
 
@@ -148,11 +192,49 @@ const HoverMap = () => {
       .addTo(map);
 
     document.getElementById("popup-button-1")?.addEventListener("click", () => {
-      console.log("Button 1 clicked!");
+      const { id } = feature;
+
+      // Remove the id from the goingSoonIds array if it exists there
+      const goingSoonIndex = goingSoonIds.indexOf(id);
+      if (goingSoonIndex !== -1) {
+        goingSoonIds.splice(goingSoonIndex, 1);
+      }
+
+      // Toggle the id in the goIds array
+      const goIndex = goIds.indexOf(id);
+      if (goIndex !== -1) {
+        goIds.splice(goIndex, 1);
+      } else {
+        goIds.push(id);
+      }
+
+      // Save the updated arrays to localStorage
+      setDataToLocalStorage("goIds", goIds);
+      setDataToLocalStorage("goingSoonIds", goingSoonIds);
+      setReload(!reload);
     });
 
     document.getElementById("popup-button-2")?.addEventListener("click", () => {
-      console.log("Button 2 clicked!");
+      const { id } = feature;
+
+      // Remove the id from the goIds array if it exists there
+      const goIndex = goIds.indexOf(id);
+      if (goIndex !== -1) {
+        goIds.splice(goIndex, 1);
+      }
+
+      // Toggle the id in the goingSoonIds array
+      const goingSoonIndex = goingSoonIds.indexOf(id);
+      if (goingSoonIndex !== -1) {
+        goingSoonIds.splice(goingSoonIndex, 1);
+      } else {
+        goingSoonIds.push(id);
+      }
+
+      // Save the updated arrays to localStorage
+      setDataToLocalStorage("goIds", goIds);
+      setDataToLocalStorage("goingSoonIds", goingSoonIds);
+      setReload(!reload);
     });
   };
 
