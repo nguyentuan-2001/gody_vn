@@ -5,6 +5,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #F5F5F5;
 }
 
 code {
@@ -26,4 +27,28 @@ code {
   padding: 10px;
   border-radius: 5px;
   box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+.font-text{
+  padding: 10px 20px;
+  text-align: center;
+}
+.box-content{
+  width: calc(100% - 320px);
+  border-radius: 5px;
+}
+
+.header-box{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  background-color: #fff;
+  height: 50px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  border-bottom: 0.5 solid #f5f5f5;
+}
+.content{
+  background: #fff;
+  padding: 10px 20px;
 }
